@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Browser Snake Game</title>
+<style>
+  body{margin:0; overflow:hidden; background:#111;}
+  canvas{display:block;}
+  #leaderboard{
+    position:absolute; top:10px; right:10px;
+    color:white; font-family:Arial; font-size:18px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<div id="leaderboard"></div>
+
+<!-- Sounds -->
+<audio id="eatSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="deathSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const eatSound = document.getElementById("eatSound");
+const deathSound = document.getElementById("deathSound");
+
+const mapSize = 2000;
+let snake = [{x: mapSize/2, y: mapSize/2}];
+let dirX = 0;
+let dirY = 0;
+let food = [];
+
+for(let i=0;i<500;i++){
+  food.push({x: Math.random()*mapSize, y: Math.random()*mapSize});
+}
+
+let keys = {};
+
+// Controls
+document.addEventListener("keydown", e=>{
+  if(e.key==="ArrowUp") keys.up=true;
+  if(e.key==="ArrowDown") keys.down=true;
+  if(e.key==="ArrowLeft") keys.left=true;
+  if(e.key==="ArrowRight") keys.right=true;
+});
+document.addEventListener("keyup", e=>{
+  if(e.key==="ArrowUp") keys.up=false;
+  if(e.key==="ArrowDown") keys.down=false;
+  if(e.key==="ArrowLeft") keys.left=false;
+  if(e.key==="ArrowRight") keys.right=false;
+});
+
+function gameLoop(){
+  // Update direction
+  dirX = 0; dirY = 0;
+  if(keys.up) dirY=-5;
+  if(keys.down) dirY=5;
+  if(keys.left) dirX=-5;
+  if(keys.right) dirX=5;
+
+  // Add new head
+  let head = {x: snake[0].x+dirX, y: snake[0].y+dirY};
+  snake.unshift(head);
+
+  // Eat food
+  for(let i=food.length-1;i>=0;i--){
+    const f = food[i];
+    const dx = head.x - f.x;
+    const dy = head.y - f.y;
+    if(Math.sqrt(dx*dx + dy*dy) < 15){
+      food.splice(i,1);
+      food.push({x: Math.random()*mapSize, y: Math.random()*mapSize});
+      eatSound.play();
+      snake.push({...head}); // grow
+    }
+  }
+
+  // Collision with self
+  for(let i=1;i<snake.length;i++){
+    let s = snake[i];
+    const dx = head.x - s.x;
+    const dy = head.y - s.y;
+    if(Math.sqrt(dx*dx + dy*dy) < 10){
+      deathSound.play();
+      snake = [{x: mapSize/2, y: mapSize/2}]; // reset snake
+    }
+  }
+
+  // Limit snake length
+  if(snake.length>100) snake.pop();
+
+  // Camera
+  const offsetX = canvas.width/2 - head.x;
+  const offsetY = canvas.height/2 - head.y;
+
+  // Draw
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+
+  // Food
+  ctx.fillStyle="red";
+  food.forEach(f=>{
+    ctx.beginPath();
+    ctx.arc(f.x,f.y,7,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // Snake
+  ctx.fillStyle="lime";
+  snake.forEach(segment=>{
+    ctx.beginPath();
+    ctx.arc(segment.x, segment.y, 10,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.restore();
+
+  // Leaderboard (snake length)
+  document.getElementById("leaderboard").innerHTML = "Length: "+snake.length;
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
